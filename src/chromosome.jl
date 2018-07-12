@@ -35,7 +35,15 @@ function GRN(nin::Int64, nout::Int64, nreg::Int64, config::Config)
     delta = rand() * (config.delta_max - config.delta_min) + config.delta_min
     weights = get_weights(ids, enh, inh, beta)
     cons = ones(grn_size) ./ grn_size
-    GRN(nin, nout, nreg, inh, enh, ids, beta, delta, weights, cons)
+    GRN(nin, nout, nreg, ids, enh, inh, beta, delta, weights, cons)
+end
+
+function GRN(nin::Int64, nout::Int64, nreg::Int64, ids::Array{Float64},
+             enh::Array{Float64}, inh::Array{Float64}, beta::Float64, delta::Float64)
+    grn_size = nin + nout + nreg
+    weights = get_weights(ids, enh, inh, beta)
+    cons = ones(grn_size) ./ grn_size
+    GRN(nin, nout, nreg, ids, enh, inh, beta, delta, weights, cons)
 end
 
 function reset!(grn::GRN)
