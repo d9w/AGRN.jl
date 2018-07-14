@@ -1,3 +1,4 @@
+export mutate
 
 function mutate_add(parent::GRN)
     ids = [copy(parent.ids); rand()]

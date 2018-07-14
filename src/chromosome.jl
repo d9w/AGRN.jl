@@ -1,3 +1,4 @@
+export GRN, reset!, set_input!, get_output, step!
 
 struct GRN
     nin::Int64
@@ -46,6 +47,14 @@ function GRN(nin::Int64, nout::Int64, nreg::Int64, ids::Array{Float64},
     GRN(nin, nout, nreg, ids, enh, inh, beta, delta, weights, cons)
 end
 
+function GRN(grn::GRN)
+    grn_size = grn.nin + grn.nout + grn.nreg
+    cons = ones(grn_size) ./ grn_size
+    weights = get_weights(grn.ids, grn.enh, grn.inh, grn.beta)
+    new_GRN(grn.nin, grn.nout, grn.nreg, copy(grn.ids), copy(grn.enh), copy(grn.inh),
+        grn.beta, grn.delta, weights, cons)
+end
+
 function reset!(grn::GRN)
     grn.cons .= 1./length(grn.ids)
 end
@@ -72,4 +81,10 @@ function step!(grn::GRN)
     for i in (grn.nin+1):length(grn.ids)
         grn.cons[i] = cons[i]
     end
+end
+
+function step!(grn::GRN, inputs::Array{Float64})
+    set_input!(grn, inputs)
+    step!(grn)
+    get_output(grn)
 end

@@ -1,4 +1,4 @@
-module GRN
+module AGRN
 
 using Logging
 
