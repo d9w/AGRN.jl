@@ -51,7 +51,7 @@ function GRN(grn::GRN)
     grn_size = grn.nin + grn.nout + grn.nreg
     cons = ones(grn_size) ./ grn_size
     weights = get_weights(grn.ids, grn.enh, grn.inh, grn.beta)
-    new_GRN(grn.nin, grn.nout, grn.nreg, copy(grn.ids), copy(grn.enh), copy(grn.inh),
+    GRN(grn.nin, grn.nout, grn.nreg, copy(grn.ids), copy(grn.enh), copy(grn.inh),
         grn.beta, grn.delta, weights, cons)
 end
 
@@ -80,6 +80,12 @@ function step!(grn::GRN)
     end
     for i in (grn.nin+1):length(grn.ids)
         grn.cons[i] = cons[i]
+    end
+end
+
+function step!(grn::GRN, nsteps::Int64)
+    for i in 1:nsteps
+        step!(grn)
     end
 end
 
