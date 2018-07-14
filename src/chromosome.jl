@@ -1,4 +1,5 @@
-export GRN, reset!, set_input!, get_output, step!
+import Base.length
+export GRN, reset!, set_input!, get_output, step!, distance
 
 struct GRN
     nin::Int64
@@ -40,7 +41,8 @@ function GRN(nin::Int64, nout::Int64, nreg::Int64, config::Config)
 end
 
 function GRN(nin::Int64, nout::Int64, nreg::Int64, ids::Array{Float64},
-             enh::Array{Float64}, inh::Array{Float64}, beta::Float64, delta::Float64)
+             enh::Array{Float64}, inh::Array{Float64},
+             beta::Float64, delta::Float64)
     grn_size = nin + nout + nreg
     weights = get_weights(ids, enh, inh, beta)
     cons = ones(grn_size) ./ grn_size
@@ -51,8 +53,12 @@ function GRN(grn::GRN)
     grn_size = grn.nin + grn.nout + grn.nreg
     cons = ones(grn_size) ./ grn_size
     weights = get_weights(grn.ids, grn.enh, grn.inh, grn.beta)
-    GRN(grn.nin, grn.nout, grn.nreg, copy(grn.ids), copy(grn.enh), copy(grn.inh),
-        grn.beta, grn.delta, weights, cons)
+    GRN(grn.nin, grn.nout, grn.nreg, copy(grn.ids), copy(grn.enh),
+        copy(grn.inh), grn.beta, grn.delta, weights, cons)
+end
+
+function length(grn::GRN)
+    length(grn.ids)
 end
 
 function reset!(grn::GRN)
@@ -94,3 +100,27 @@ function step!(grn::GRN, inputs::Array{Float64})
     step!(grn)
     get_output(grn)
 end
+
+function distance(g1::Array{Float64}, g2::Array{Float64})
+    # TODO: align regulatory
+    dist = 1.0
+    if (length(g1) > 0) || (length(g2) > 0)
+        if length(g1) > length(g2)
+            dist = sum(abs.(g1 - [g2; zeros(length(g1)-length(g2))]))
+        elseif length(g1) < length(g2)
+            dist = sum(abs.(g2 - [g1; zeros(length(g2)-length(g1))]))
+        else
+            dist = sum(abs.(g1 .- g2))
+        end
+    end
+    dist
+end
+
+function distance(g1::GRN, g2::GRN, config::Config)
+    (distance(g1.ids, g2.ids) * config.dist_coef_ids +
+     distance(g1.enh, g2.enh) * config.dist_coef_enh +
+     distance(g1.inh, g2.inh) * config.dist_coef_inh +
+     (abs(g1.beta - g2.beta) / (config.beta_max - config.beta_min)) +
+     (abs(g1.delta - g2.delta) / (config.delta_max - config.delta_min)))
+end
+
