@@ -1,4 +1,5 @@
 import Base.length
+import JSON
 export GRN, reset!, set_input!, get_output, step!, distance
 
 struct GRN
@@ -55,6 +56,14 @@ function GRN(grn::GRN)
     weights = get_weights(grn.ids, grn.enh, grn.inh, grn.beta)
     GRN(grn.nin, grn.nout, grn.nreg, copy(grn.ids), copy(grn.enh),
         copy(grn.inh), grn.beta, grn.delta, weights, cons)
+end
+
+function GRN(json_repr::String)
+    d = JSON.parse(json_repr)
+    ids = Array{Float64}(d["ids"])
+    enh = Array{Float64}(d["enh"])
+    inh = Array{Float64}(d["inh"])
+    GRN(d["nin"], d["nout"], d["nreg"], ids, enh, inh, d["beta"], d["delta"])
 end
 
 function length(grn::GRN)
