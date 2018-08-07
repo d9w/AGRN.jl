@@ -4,6 +4,11 @@ struct Fitness
     nin::Int64
     nout::Int64
     func::Function
+    cacheable::Bool
+end
+
+function Fitness(nin::Int64, nout::Int64, func::Function)
+    Fitness(nin, nout, func, true)
 end
 
 function tournament(fits::Array{Float64}; tsize=3)
@@ -159,8 +164,10 @@ function evolve(fitness::Fitness, config::Config)
             for i in 1:nmut
                 parent = spec[tournament(sfits)]
                 child = mutate(parent, config)
-                if distance(parent, child, config) == 0
-                    new_fits[popi] = fits[popi]
+                if fitness.cacheable
+                    if distance(parent, child, config) == 0
+                        new_fits[popi] = fits[popi]
+                    end
                 end
                 new_pop[popi] = child
                 popi += 1
@@ -174,7 +181,9 @@ function evolve(fitness::Fitness, config::Config)
             Logging.debug("Copy $s popi: $popi, ncopy: $ncopy")
             for i in 1:ncopy
                 new_pop[popi] = GRN(spec[tournament(sfits)])
-                new_fits[popi] = fits[popi]
+                if fitness.cacheable
+                    new_fits[popi] = fits[popi]
+                end
                 popi += 1
             end
 
