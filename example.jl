@@ -71,6 +71,7 @@ end
 
 # For running interactively
 
+# Logging.configure(filename="example.log", level=Logging.INFO)
 # fitness = get_fitness("MountainCarContinuous-v0")
 # config = AGRN.Config()
 # maxfit, best = evolve(fitness, config)

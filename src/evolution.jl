@@ -97,23 +97,12 @@ function evolve(fitness::Fitness, config::Config)
             end
         end
 
-        #=
+        Logging.info(@sprintf("E: %d %d %0.5f %0.5f",
+                              generation, eval_count, mean(fits), max_fit))
         if new_best
-            refit = max_fit
-            if record_best
-                refit = record_fitness(best)
-            end
-            Logging.info(@sprintf("R: %d %d %0.5f %d %d %s %s %s",
-                                  seed, eval_count, max_fit,
-                                  sum([n.active for n in best.nodes]),
-                                  length(best.nodes),
-                                  "NEAT", string(ctype),
-                                  config.to_string()))
-            if config.save_best
-                Logging.info(@sprintf("C: %s", string(best.genes)))
-            end
+            Logging.info(@sprintf("B: %d %0.5f|%s", generation, max_fit,
+                                  JSON.json(best)))
         end
-        =#
 
         # representatives
         Logging.debug("representatives $generation")
