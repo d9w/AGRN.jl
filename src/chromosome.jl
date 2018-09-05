@@ -76,6 +76,8 @@ end
 
 function set_input!(grn::GRN, input::Array{Float64})
     @assert length(input) == grn.nin
+    # @assert all(input .>= 0.0)
+    # @assert all(input .<= 1.0)
     for i in eachindex(input)
         grn.cons[i] = input[i]
     end
