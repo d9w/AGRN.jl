@@ -93,7 +93,7 @@ function evolve(fitness::Fitness, config::Config)
         @debug("evaluation $generation")
         dfits = SharedArray{Float64}(config.ga_population)
         dfits .= fits
-        @sync @distributed for p in eachindex(population)
+        @sync @distributed for p in 1:config.ga_population
             dfits[p] = fitness.func(population[p])
         end
         fits .= dfits
