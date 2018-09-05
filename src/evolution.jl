@@ -1,3 +1,5 @@
+using SharedArrays
+using Distributed
 export Fitness, GRN, evolve
 
 struct Fitness
@@ -51,7 +53,7 @@ end
 function species_sizes(fits::Array{Float64}, species::Array{Int64}, config::Config)
     nspecies = length(unique(species))
     spec_fits = map(x->mean(fits[species.==x])-minimum(fits), 1:nspecies)
-    Logging.debug("spec fits: $spec_fits")
+    @debug("spec fits: $spec_fits")
     spec_sizes = map(x->spec_fits[x]/sum(spec_fits), 1:nspecies)
     spec_sizes = spec_sizes./sum(spec_sizes).*config.ga_population
     spec_sizes[isnan.(spec_sizes)] = 0
@@ -63,13 +65,14 @@ function species_sizes(fits::Array{Float64}, species::Array{Int64}, config::Conf
     while sum(spec_sizes) < config.ga_population
         spec_sizes[indmin(spec_sizes)] += 1
     end
-    Logging.debug("spec sizes: $spec_sizes")
+    @debug("spec sizes: $spec_sizes")
     spec_sizes
 end
 
 function evolve(fitness::Fitness, config::Config)
     population = Array{GRN}(config.ga_population)
-    fits = -Inf*ones(Float64, config.ga_population)
+    fits = Array{Float64}(config.ga_population)
+    fits .= -Inf
     species = Array{Int64}(config.ga_population)
     for p in eachindex(population)
         if p <= config.init_species
@@ -87,30 +90,34 @@ function evolve(fitness::Fitness, config::Config)
 
     for generation in 1:config.ga_num_generations
         # evaluation
-        Logging.debug("evaluation $generation")
+        @debug("evaluation $generation")
+        dfits = SharedArray{Float64}(config.ga_population)
+        dfits .= fits
+        @sync @distributed for p in eachindex(population)
+            dfits[p] = fitness.func(population[p])
+        end
+        fits .= dfits
+
         new_best = false
         for p in eachindex(population)
-            if fits[p] == -Inf
-                fit = fitness.func(population[p])
-                fits[p] = fit
-                eval_count += 1
-                if fit > max_fit
-                    max_fit = fit
-                    best = population[p]
-                    new_best = true
-                end
+            fit = fits[p]
+            eval_count += 1
+            if fit > max_fit
+                max_fit = fit
+                best = population[p]
+                new_best = true
             end
         end
 
-        Logging.info(@sprintf("E: %d %d %0.5f %0.5f",
+        @info(@sprintf("E: %d %d %0.5f %0.5f",
                               generation, eval_count, mean(fits), max_fit))
         if new_best
-            Logging.info(@sprintf("B: %d %0.5f|%s", generation, max_fit,
+            @info(@sprintf("B: %d %0.5f|%s", generation, max_fit,
                                   JSON.json(best)))
         end
 
         # representatives
-        Logging.debug("representatives $generation")
+        @debug("representatives $generation")
         nspecies = length(unique(species))
         reprs = Array{GRN}(nspecies)
         for s in 1:nspecies
@@ -118,16 +125,16 @@ function evolve(fitness::Fitness, config::Config)
         end
 
         # species sizes
-        Logging.debug("species sizes $generation $nspecies")
+        @debug("species sizes $generation $nspecies")
         spec_sizes = species_sizes(fits, species, config)
         new_pop = Array{GRN}(config.ga_population)
         new_fits = -Inf*ones(Float64, config.ga_population)
         popi = 1
 
         # create new population
-        Logging.debug("new population $generation $spec_sizes")
+        @debug("new population $generation $spec_sizes")
         for s in 1:nspecies
-            Logging.debug("species $s")
+            @debug("species $s")
             sfits = fits[species.==s]
             spec = population[species.==s]
             ncross = round(spec_sizes[s] * config.ga_crossover_rate)
@@ -147,7 +154,7 @@ function evolve(fitness::Fitness, config::Config)
             end
 
             # crossover
-            Logging.debug("Crossover $s popi: $popi, ncross: $ncross")
+            @debug("Crossover $s popi: $popi, ncross: $ncross")
             for i in 1:ncross
                 p1 = spec[tournament(sfits)]
                 p2 = spec[tournament(sfits)]
@@ -160,7 +167,7 @@ function evolve(fitness::Fitness, config::Config)
             end
 
             # mutation
-            Logging.debug("Mutation $s popi: $popi, nmut: $nmut")
+            @debug("Mutation $s popi: $popi, nmut: $nmut")
             for i in 1:nmut
                 parent = spec[tournament(sfits)]
                 child = mutate(parent, config)
@@ -178,7 +185,7 @@ function evolve(fitness::Fitness, config::Config)
             end
 
             # copy
-            Logging.debug("Copy $s popi: $popi, ncopy: $ncopy")
+            @debug("Copy $s popi: $popi, ncopy: $ncopy")
             for i in 1:ncopy
                 new_pop[popi] = GRN(spec[tournament(sfits)])
                 if fitness.cacheable
@@ -192,12 +199,12 @@ function evolve(fitness::Fitness, config::Config)
             end
         end
 
-        Logging.debug("variable set $generation")
+        @debug("variable set $generation")
         species = speciation(new_pop, reprs, config)
         population = new_pop
         fits = new_fits
 
-        Logging.debug("done $generation")
+        @debug("done $generation")
     end
 
     max_fit, best

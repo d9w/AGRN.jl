@@ -1,6 +1,7 @@
 module AGRN
 
 using Logging
+using Printf
 
 include("config.jl")
 include("chromosome.jl")

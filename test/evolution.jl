@@ -1,6 +1,5 @@
 using Base.Test
 using AGRN
-using Logging
 
 config = AGRN.Config()
 
